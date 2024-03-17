@@ -1,0 +1,62 @@
+Para configurar o Statspack siga as instruções a seguir:
+
+1 – Crie uma tablespace chamada PERFSTAT:
+
+create tablespace PERFSTAT datafile '+DATA/xxxx/perfstat_01.dbf' size 1G;
+
+2 – Se estiver utilizando arquitetura multitenant execute o script abaixo. Caso contrário, vá direto para o passo 3.
+
+alter session set "_oracle_script"=true;
+
+3 – Execute o script para criação dos objetos do Statspack:
+
+@?/rdbms/admin/spcreate.sql
+
+Nota: Este script vai te pedir algumas informações como:
+
+Nome do usuário que será criado (informe PERFSTAT)
+Senha do referido usuário: informe uma senha a seu critério
+Tablespace para o usuário perfstat: informe a tablespace PERFSTAT
+Tablespace temporária: informe a tablespace temporária da sua instância
+4 – Colete as estátisticas do usuário statspack (opcional, porém recomendável):
+
+exec dbms_stats.gather_schema_stats('PERFSTAT');
+
+5 – A patir de agora, você já pode se conectar no banco de dados com o usuário statspack e executar a primeira coleta de snapshots:
+
+conn perfstat/passwd
+
+exec statspack.snap;
+
+6 – A coleta das informações através dos snapshots deve ser feita de maneira automática, então o que você pode fazer é criar um job para que a coleta seja executa em um intervalo regular, para isso podemos usar a DBMS_SCHEDULER. No exemplo abaixo vamos criar um job para fazer a coleta a cada 20 minutos:
+
+BEGIN
+  DBMS_SCHEDULER.CREATE_JOB (
+   job_name           =>  'coleta_snapshot',
+   job_type           =>  'STORED_PROCEDURE',
+   job_action         =>  'perfstat.statspack.snap',
+   start_date         =>  '31-JAN-24 07.00.00 AM America/Sao_Paulo',
+   repeat_interval    =>  'FREQ=MINUTELY;INTERVAL=20',
+   comments           =>  'Coleta de snapshots Statspack');
+END;
+/
+ 
+7 – Para monitorar o JOB que fora criado, você pode executar o select abaixo.
+ 
+SELECT owner, job_name, enabled, state, job_action, next_run_date, run_count, failure_count
+FROM dba_scheduler_jobs
+WHERE owner = 'PERFSTAT';
+ 
+8 – Como última etapa, para garantirmos que tudo está OK, execute o select abaixo e veja se existem registros na view STATS$SNAPSHOT. Caso haja registros nesta view significa que os snapshots estão sendo coletados normalmente, por enquanto essa informação é suficiente e no próximo post vamos entender em detalhes o que essas informações querem dizer.
+ 
+SELECT snap_id,to_char(snap_time, 'dd/mm/rr hh24:mi') snap_time,snapshot_exec_time_s
+FROM perfstat.stats$snapshot
+ORDER BY
+1;
+
+
+
+--PARTE DE CONSULTA DO REPORT
+sqlplus / as sysdba
+@?/rdbms/admin/spreport
+

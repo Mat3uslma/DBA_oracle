@@ -1,0 +1,88 @@
+#ORIGEM#### 
+systemctl stop firewalld
+systemctl disable firewalld
+
+yum install oracle-database-server-12cR2-preinstall.x86_64
+
+
+-- comando de instalação SGBD
+arquivo: db_install.rsp
+./runInstaller -ignoreSysPrereqs -showProgress -silent -responseFile /home/oracle/db_install.rsp
+
+-- comando criação listener (NETCA)
+arquivo: netca.rsp
+netca -silent -responsefile diretorio/netca.rsp
+
+-- Banco de dados (DBCA)
+Pode ser deito de duas formas
+- arquivo: dbca.rsp
+
+- ou passando todos os atributos
+dbca -silent -createDatabase -templateName General_Purpose.dbc -gdbname orcl -sid orcl -responseFile NO_VALUE -characterSet WE8ISO8859P1 -sysPassword suporte -systemPassword suporte -createAsContainerDatabase false -databaseType MULTIPURPOSE -memoryMgmtType auto_sga -totalMemory 800 -redoLogFileSize 300 -emConfiguration NONE
+
+RMAN:
+Backup database plus archivelog;
+
+#DESTINO########
+systemctl stop firewalld
+systemctl disable firewalld
+vi /etc/selinux/config
+permissive
+
+yum -y install oracle-database-preinstall-19c
+passwd oracle
+
+mkdir -p /u01/app/oracle/product/19c/db_1
+mkdir -p /u02/oradata
+mkdir -p /u01/app/oracle/admin/cdb1/adump
+
+
+chown -R oracle:oinstall /u01 /u02
+chmod -R 775 /u01 /u02
+
+Instalar somente o software do oracle
+Pegar o arquivo Pfile Da origem e subir o banco destino em nomout 
+Obs alterar o compatible do Pfile para 19.0.0 
+
+
+RMAN ORIGEM:
+run
+{
+crosscheck backup;
+crosscheck archivelog all;
+crosscheck archivelog all;
+backup as compressed backupset database format '/u02/oradata/Fullback_%T_%U'plus archivelog format '/u02/oradata/Archive_%T_%U';
+backup current controlfile format '/u02/oradata/Controlback_%T_%U';
+release channel ch1;
+}
+
+SQL DESTINO :
+startup nomount pfile='/u01/app/oracle/product/19c/db_1/dbs/initcdb1.ora;
+
+RMAN DESTINO:
+restore controlfile from '/u02/oradata/Controlback_20240216_042j8vaq_1_1';
+alter database mount;
+
+crosscheck backupset;
+delete expired backupset;
+catalog start with '/u02/oradata';
+run{
+allocate channel ch1 device type disk;
+set newname for database to '/u02/oradata/cdb1/%U';
+set newname for tempfile '/u02/oradata/cdb1/temp01.dbf' to '/u02/oradata/cdb1/temp01.dbf';
+restore database;
+switch datafile all;
+switch tempfile all;
+release channel ch1;
+}
+
+run{
+allocate channel ch1 device type disk;
+recover database;
+release channel ch1;
+}
+
+SQL DESTINO:
+startup upgrade;
+
+

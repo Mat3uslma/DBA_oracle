@@ -1,0 +1,46 @@
+
+Configure STATSPACK reports in ORACLE Standard Editions
+===========================================================
+
+Step 1: Create the perfstat Tablespace
+
+create tablespace perfstat datafile 'D:\ORA12CR2\ORADATA\TESTDB\perfstat01.DBF'size 500m;
+    
+Step 2: Run the creation Scripts
+
+@?/rdbms/admin/spcreate.sql
+
+Put Password for Perfstat user
+
+Step 3:To Collect Stats schedule job in hourly basis
+------------------------------------------------------
+
+@?/rdbms/admin/spauto.sql
+
+set linesize 200
+set pagesize 200
+col what for a30
+col interval for a30
+col THIS_SEC for a10
+col NEXT_SEC for a10
+col job for 999
+col NEXT_DATE for a10
+
+Step 4:Check Job :
+
+select JOB,LAST_DATE,LAST_SEC,THIS_DATE,THIS_SEC,NEXT_DATE,NEXT_SEC,BROKEN,WHAT,INTERVAL
+from dba_jobs where job=21;
+
+Step 5:Generate Statspack report
+
+You need to connect with PERFSTAT user to Generate Report....
+
+@?/rdbms/admin/spreport.sql
+
+Since we Just implemented thats why No data is there , 1st manually run Job to generate stats report
+
+Step 6: exec dbms_ijob.run(&jobNum);
+
+Step 7:Generate Statspack report
+
+@?/rdbms/admin/spreport.sql

@@ -1,0 +1,86 @@
+Oracle Database: Usando o Oracle Database Security Assessment Tool (DBSAT)
+
+- Ambiente
+S.O: Oracle Linux 8
+SGBD: Oracle 19c 
+Banco: Single Instance com Multitenant (CDB e PDBs)
+
+
+##############################################
+
+
+--> Definição
+
+O Oracle Database Security Assessment Tool (DBSAT), é uma ferramenta de linha de comando focada na detecção de potenciais vulnerabilidades de segurança. Sua maior abrangência ocorre dentro do banco de dados mas também inspeciona componentes do sistema operacional e rede (listener) em busca de falhas.
+A ferramenta fornece uma visão sobre o atual status de usuários, roles, permissões e políticas de controle de segurança com o objetivo de promover abordagens bem-sucedidas para mitigar potenciais riscos de segurança.
+
+
+--> Componentes
+
+O DBSAT é composto por dois componentes:
+DBSAT Collector: Responsável pela execução das SQL queries e comandos de sistema operacional que coletam os dados a serem avaliados. Os dados são armazenados em um arquivo que é usado posteriormente pelo DBSAT Reporter na fase de análise.
+DBSAT Reporter: Responsável por analisar os dados coletados e gerar o reporte das descobertas e recomendações em arquivos de múltiplos formatos como HTML, Excel e Texto.
+
+
+--> Beneficios
+
+Os principais benefícios do uso do DBSAT são:
+- Identificação rápida dos erros de configuração de segurança do banco de dados;
+- Recomendações embasadas nas melhores práticas de segurança;
+- Redução da amplitude de um ataque e exposição ao risco.
+
+
+--> Onde se aplica
+
+O DBSTAT funciona sobre o Oracle database 10.2.0.5 e versões posteriores incluindo ambientes 12c multitenant e cloud. As plataformas suportadas são:
+- Solaris x64 and Solaris SPARC
+- Linux x86-64
+- Windows x64
+- HP-UX IA (64-bit)
+- IBM AIX & zSeries Based Linux
+
+
+##############################################
+
+
+--> Download
+
+https://www.oracle.com/br/database/technologies/security/dbsat.html
+Oracle Database Security Assessment Tool (DBSAT) (Doc ID 2138254.1)
+
+
+--> Prerequisitos (root)
+
+- python
+python -V
+yum install python -y 
+
+update-alternatives --config python
+
+
+--> Transferir e descompactar (oracle)
+
+mkdir -p /home/oracle/dbsat
+cd /home/oracle/dbsat
+unzip /home/oracle/dbsat/dbsat.zip
+
+
+--> Uso basico (oracle)
+
+cd /home/oracle/dbsat
+./dbsat
+
+
+--> Fazer coleta (oracle)
+
+cd /home/oracle/dbsat
+./dbsat collect system@pdb01 output_pdb01
+
+
+--> Gerar relatorio (oracle)
+
+cd /home/oracle/dbsat
+./dbsat report output_pdb01
+
+
+--> Analisar relatorio 

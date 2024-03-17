@@ -1,0 +1,41 @@
+alter system set db_recovery_file_dest_size=5G scope=both sid='*';
+alter system set db_recovery_file_dest= '+DATA' scope=both sid='*';
+alter system set datafiles='+DATA' scope=spfile;
+
+restore controlfile from '/u02/oradata/ORCL/control01.ctl';
+
+
+alter database rename file '+DATA/orcl/datafile/sysaux.264.1154510831' to '+DATA/orcl/datafile/sysaux01.dbf';
+
+
+alter database move datafile '/u02/oradata/ORCL/orclpdb/sysaux01.dbf'  to '+DATA';
+copy datafile '/u02/oradata/ORCL/orclpdb/system01.dbf' to '+DATA'; 
+copy datafile '+DATA/ORCL/DATAFILE/SYSAUX.264.1154510831' to '/u02/oradata/ORCL'; 
+ALTER TABLESPACE  DROP TEMPFILE '+DATA/isis/tempfile/pstemp.291.641298061';
+
+
+
+alter tablespace sysaux online;
+switch datafile 7 to copy;
+
+
+Anotações
+
+CHECAR SE ESTA TUDO RODANDO COM O SQLPLUS / AS SYSASM
+
+select name, state from v$asm_diskgroup;
+select status from v$instance;
+show parameter asm_diskgroups;
+
+mudar o valor dos asmdiskgroup
+ALTER SYSTEM SET ASM_DISKGROUPS = DATA
+
+
+ADD ORCL NO GRID
+srvctl add database -d ORCL -o /u01/app/oracle/product/19.0.0/dbhome_1 -p /u01/app/oracle/product/19.0.0/dbhome_1/dbs/spfileorcl.ora
+gpasswd -a oracle asmdba
+srvctl start database -d orcl -o open
+
+
+
+

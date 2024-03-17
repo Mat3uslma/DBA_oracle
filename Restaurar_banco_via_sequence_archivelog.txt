@@ -1,0 +1,11 @@
+Oracle 19c-Point in time recovery using RMAN
+######################################################################
+archive log list 
+select sequence#,first_change#, to_char(first_time,'HH24:MI:SS') from v$log order by 3;
+
+######################################################################
+run {
+set until sequence=12;
+restore database;
+recover database;
+}

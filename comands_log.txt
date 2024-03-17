@@ -1,0 +1,39 @@
+#CONSULTAS DE REDO LOG
+
+set lines 1000
+SELECT a.GROUP#, a.THREAD#, a.SEQUENCE#,
+ a.ARCHIVED, a.STATUS, b.MEMBER AS REDOLOG_FILE_NAME,
+ (a.BYTES/1024/1024) AS SIZE_MB FROM v$log a
+JOIN v$logfile b ON a.Group#=b.Group#
+ORDER BY a.GROUP#;
+
+select GROUP#,THREAD#,SEQUENCE#,bytes/1024/1024,
+MEMBERS,STATUS from v$log;
+select group#,member,type,status from v$logfile;
+select dbid, thread#, sequence#, used, archived, status, first_change#, first_time, last_change#, last_time from v$standby_log;
+
+#PARAMETROS DE THREAD
+select thread#,status from v$thread;
+show parameter thread
+
+#ADD MEMBRO AO UM GRUPO JA CRIADO DE REDO + ARMAZENAMENTO
+ALTER DATABASE DROP LOGFILE MEMBER '/u02/oradata/CDB1/red03.log';
+ALTER DATABASE DROP LOGFILE GROUP 3;
+
+
+#ARCHIVE_LOG
+ARCHIVE LOG LIST;
+
+#COMANDOS DE ADD DO REDO LOG NO DATABASE
+
+ALTER DATABASE ADD  LOGFILE GROUP 10 '/u02/oradata/CDB1/redo10.log' SIZE 500M;
+ALTER DATABASE ADD  LOGFILE GROUP 11 '/u02/oradata/CDB1/redo11.log' SIZE 500M;
+ALTER DATABASE ADD  LOGFILE GROUP 12 '/u02/oradata/CDB1/redo12.log' SIZE 500M;
+
+ALTER DATABASE ADD standby LOGFILE THREAD 1 group 13 size 500M;
+ALTER DATABASE ADD standby LOGFILE THREAD 3 group 11 size 200M;
+ALTER DATABASE ADD standby LOGFILE THREAD 3 group 33 size 200M;
+
+ALTER DATABASE ADD STANDBY LOGFILE GROUP 1 '/u02/oradata/CDB1/redo01.log' SIZE 500M;
+ALTER DATABASE ADD STANDBY LOGFILE GROUP 2 '/u02/oradata/CDB1/redo01.log' SIZE 500M;
+ALTER DATABASE ADD STANDBY LOGFILE GROUP 3 '/u02/oradata/CDB1/redo03.log' SIZE 500M;

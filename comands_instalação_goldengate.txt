@@ -1,0 +1,94 @@
+GOLDEN GATE 
+configurar Variaveis de ambiente
+
+export ORACLE_BASE=/u01/app/oracle
+export DB_HOME=$ORACLE_BASE/product/19c/db_1
+export ORACLE_HOME=$DB_HOME
+export ORACLE_SID=cdb1
+export LB_LIBRARY_PATH=$ORACLE_HOME/lib
+EXPORT OGG_HOME=$ORACLE_HOME/product/19c/ogghome_1
+export PATH=$PATH:$ORACLE_HOME/bin:$OGG_HOME/bin
+
+#####################################################################################
+mkdir -p /u01/app/oracle/product/19c/ogghome_1
+Baixa o golden gate 19c e passar para a pasta 
+Unzip 
+cd /u01/app/oracle/product/19c/ogghome_1/fbo_ggs_Linux_x64_shiphome/Disk1/response
+cp oggcore.rsp /home/oracle
+
+######################################################################################
+Editar o arquivo response de acordo com seu banco 
+
+apos isso entra na pasta ogghome_1/Disks1/
+./runInstaller -silent -responseFile \ /home/oracle/oggcore.rsp -showProgress 
+
+######################################################################################
+SQLPLUS	
+ALTER SYSTEM SET ENABLE_GOLDENGATE_REPLICATION=true;
+ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;
+ALTER DATABASE FORCE LOGGING;
+ALTER SYSTEM SWITCH LOGFILE;
+
+CREATE USER  ggadmin IDENTIFIED BY oracle;
+EXEC DBMS_GOLDENGATE_AUTH.GRANT_ADMIN_PRIVILEGE('GGADMIN','CAPTURE');
+GRANT CREATE SESSION TO GGADMIN;
+ALTER USER GGADMIN QUOTA UNLIMITED ON USERS; 
+GRANT CONNECT TO GGADMIN;
+GRANT CREATE VIEW TO GGADMIN;
+GRANT ALTER SYSTEM TO GGADMIN;
+GRANT SELECT ANY DICTIONARY TO GGADMIN;
+
+##########################################################################################
+
+Adicinar usuario
+ADD CREDENTIALSTORE
+ALTER CREDENTIALSTORE ADD USER ggadmin@pdb1 , PASSWORD oracle ALIAS cdb
+dblogin userid system@cdb1 ,password oracle
+dblogin useridalias admin
+REMOVER USUARIO
+ALTER CREDENTIALSTORE DELETE USER *
+
+EDITAR USUARIO
+ALTER CREDENTIALSTORE ADD USER oggadmin@PDEV PASSWORD oggadmin_987 ALIAS oggs
+ALTER CREDENTIALSTORE REPLACE USER oggadmin PASSWORD oggadmin_987 ALIAS ogg
+#########################################################################################
+
+GOLDENGATE
+ADD SCHEMATRANDATA ggadmin --para o esquema todo
+
+	
+ADD TRANDATA cdb1.hr.hr.employees --apenas para table
+
+
+CONFIGURAR EXTRACT 	
+edit param EXT
+
+Extract EXT
+ExtTrail ./dirdat/ts
+dblogin useridalias admin
+DDL INCLUDE MAPPED
+Table GGADMIN.*;
+Sequence GGADMIN.*;
+
+ADD EXTRACT EXT, integrated tranlog, begin now 
+EXTRACT (Integrated) added.
+
+REGISTER EXTRACT EXT DATABASE CONTAINER (PDB1)
+
+ADD EXTTRAIL /dirdat/ex, EXTRACT EXT
+EXTTRAIL added.
+
+########################################################################################
+DELETE EXTRACT --
+DELETE EXTRACT  EXTTESTE
+UNREGISTER EXTRACT EXT DATABASE
+
+########################################################################################
+start extract ext
+
+
+########################################################################################
+
+ANOTAÇÕES:
+O caminho so extrac traill a pasta final tem que ter somente 2 caracteres tipo ts
+A database tem que ser registrado e startado via cdb$root

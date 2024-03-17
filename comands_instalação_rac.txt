@@ -1,0 +1,289 @@
+Antes de tudo criar uma pasta em alguma localização do seu computador para criar os disco dentro dela para compartilhar entre os 2 servidores
+apos isso criar discos oara VOTEDISK E PARA DATA
+CRIA 4 DISK DE 8 GB PARA DADOS = DATA
+3 DISCOS DE 4 GB PARA VOTE DISK 
+obs: tem que criar os disco pre alocado para depois compartilha eles
+após compartilha add os discos no server 2
+
+#########################################################################################
+systemctl stop firewalld
+systemctl disable firewalld
+vi /etc/selinux/config
+permissive
+
+yum install -y oracleasm-support
+yum -y install oracle-database-preinstall-19c
+yum install -y bind
+yum install -y chrony
+yum -y install nano 
+yum install -y iscsi-initiator-utils
+
+
+chronyc -a 'burst 4/4'
+chronyc makestep
+systemctl start iscsid
+systemctl start named.service
+systemctl enable chronyd.service
+systemctl start chronyd.service
+
+
+Desativar IPV6
+#########################################################################################
+Criar usuario GRID e grupos especificos
+
+groupadd -g 54327 asmdba
+groupadd -g 54328 asmadmin
+groupadd -g 54329 asmoper
+mkdir -p /u01/app/19c/grid
+mkdir -p /u01/app/oracle/product/19c/db_1
+chmod -R 775 /u01/
+chown -R oracle:oinstall /u01/
+usermod  -G oinstall,asmadmin,asmoper,asmdba,dba,oper  grid
+useradd -u 54322 -g oinstall -G dba,asmdba,asmadmin,asmoper grid
+
+
+#########################################################################################
+oracleasm init
+cd /dev/oracleasm/disks
+
+fdisk /dev/sdb
+oracleasm createdisk DATA_01 /dev/sdb1	
+oracleasm createdisk DATA_02 /dev/sdc1
+oracleasm createdisk DATA_03 /dev/sdd1
+oracleasm createdisk DATA_04 /dev/sde1 	
+oracleasm createdisk OCR_01 /dev/sdf1   
+oracleasm createdisk OCR_02 /dev/sdg1  
+oracleasm createdisk OCR_03 /dev/sdh1  
+dd if=/dev/zero of=/dev/sdb1 bs=1024 count=4
+
+ /dev/sdb1              /u02    ext3    defaults        1 1
+
+
+dar permissoes para pastas
+oracleasm scandisks
+chown -R grid:oinstall /dev/oracleasm/disks
+chown -R oracle:oinstall /dev/oracleasm/disks/
+chmod -R 775 /dev/oracleasm/disks/
+
+#########################################################################################
+
+No virtual Box
+PLACA DE REDE 1 HOSTONLY
+PLACA DE REDE 2 INTERNA
+PLACA DE REDE 3 EM BRIDGE
+
+#########################################################################################
+
+NA PLACA DE REDE
+nano /etc/hosts
+# Plublic
+192.168.24.31	local01.localdomain	local01
+192.168.24.32	local02.localdomain	local02
+
+# Private
+192.168.100.1	local01-priv.localdomain	local01-priv
+192.168.100.2	local02-priv.localdomain	local02-priv
+
+# Virtual
+192.168.24.1	local01-vip.localdomain	local01-vip
+192.168.24.2	local02-vip.localdomain	local02-vip
+
+#########################################################################################
+
+nano  /etc/hosts
+#Public
+192.168.24.1 orarac1.localdomain orarac1
+192.168.24.2 orarac2.localdomain orarac2
+
+# Private
+192.168.10.1 orarac1-priv.localdomain orarac1-priv
+192.168.10.2 orarac2-priv.localdomain orarac2-priv
+
+# Virtual
+192.168.24.31 orarac1-vip.localdomain orarac1-vip
+192.168.24.32 orarac2-vip.localdomain orarac2-vip
+
+# SCAN
+192.168.24.41 orarac-scan.localdomain orarac-scan
+192.168.24.42 orarac-scan.localdomain orarac-scan
+192.168.24.43 orarac-scan.localdomain orarac-scan
+
+
+#########################################################################################
+LEMBRAR DE ATIVAR AS PLACAS DE REDE ANTES DE RODA O ./GRID
+
+
+#########################################################################################
+# obs: a rede virtual tem que estar na mesma subrede do ip plublico que sai para internet 
+a rede interna voce mesmo pode criar para os server se comunicar cinernamente
+
+#########################################################################################
+cd /u01/app/grid/product/19c/gridhome_1/cv/rpm
+rpm -Uvh cvuqdisk-1.0.10-1.rpm
+cd /u01/app/19c/grid/deinstall
+./sshUserSetup.sh -user oracle -hosts "orarac1 orarac2" -noPromptPassphrase -confirm -advanced
+
+#########################################################################################
+
+ORACLE
+
+TMP=/tmp
+export TMPDIR=$TMP
+export ORACLE_BASE=/u01/app/oracle
+export GRID_HOME=/u01/app/19c/grid
+export DB_HOME=$ORACLE_BASE/product/19c/db_1
+export ORACLE_HOME=$DB_HOME
+export ORACLE_SID=orcl
+exportar ORACLE_TERM=xterm
+exportar BASE_PATH=/usr/sbin:$PATH
+exportar PATH=$ORACLE_HOME/bin:$BASE_PATH
+exportar LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+exportar CLASSPATH=$ORACLE_HOME/JRE: $ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib
+
+alias grid='. /home/oracle/grid.env'
+alias db='. /home/oracle/db.env'
+
+GRID
+export ORACLE_SID=+ASM
+export ORACLE_BASE=/u01/app/oracle
+export GRID_HOME=/u01/app/19c/grid
+export ORACLE_HOME=$GRID_HOME
+PATH=$ORACLE_HOME/bin:$PATH; 
+export PATH
+export PATH=/usr/sbin:/usr/local/bin:/$PATH
+LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib; 
+export LD_LIBRARY_PATH
+CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib; 
+export CLASSPATH
+
+#########################################################################################
+
+Configurar o dns por conta de suas maquinas ser Virtual 
+nano /etc/named.conf
+
+Edita o primeiro arquivo e coloca ao lado de localhost 192.168.24.0/24
+
+zone "localdomain" {
+type master;
+file "localdomain.zone";
+allow-update { none; };
+};
+
+zone "24.168.192.in-addr.arpa." {
+type master;
+file "24.168.192.in-addr.arpa";
+allow-update { none; };
+};
+
+#########################################################################################
+
+Agora Criar um arquivo nano /var/named/localdomain.zone
+TEM QUE SER AS INFORMAÇÕES DE ACORDO COM O SERVER
+$TTL 86400
+@ IN SOA orarac2.localdomain.com. root.localdomain.com. (
+2014051001 ; serial
+3600 ; refresh
+1800 ; retry
+604800 ; expire
+86400 ; minimum
+)
+@ IN NS orarac2.localdomain.
+localhost IN A 127.0.0.1
+orarac1 IN A 192.168.24.1
+orarac2 IN A 192.168.24.2
+orarac1-priv IN A 192.168.10.1
+orarac2-priv IN A 192.168.10.2
+orarac1-vip IN A 192.168.24.31
+orarac2-vip IN A 192.168.24.32
+orarac-scan IN A 192.168.24.41
+orarac-scan IN A 192.168.24.42
+orarac-scan IN A 192.168.24.43
+
+#########################################################################################
+
+Criar o dns reverso Citado acima
+24.168.192.in.addr.arpa
+
+SERVER PARA O SERVER 1 E 2
+nano /var/named/24.168.192.in-addr.arpa
+
+$TTL 86400
+@ IN SOA orarac1.localdomain.com. root.localdomain.com. (
+2
+3H
+1H
+1W
+1H )
+@ IN NS orarac1.localdomain.com.
+@ IN PTR localdomain.com.
+orarac1 IN A 192.168.24.1
+orarac-scan IN A 192.168.24.41
+orarac-scan IN A 192.168.24.42
+orarac-scan IN A 192.168.24.43
+1 IN PTR orarac1.localdomain.com.
+41 IN PTR orarac-scan.localdomain.
+42 IN PTR orarac-scan.localdomain.
+43 IN PTR orarac-scan.localdomain.
+
+#########################################################################################
+
+Edita o nano /etc/resolv.conf
+e coloca o Seu ip publico como dns por conta de ser uma maquina virtual
+orarac1 nameserver 192.168.24.1
+orarac2 nameserver 192.168.24.2
+
+#########################################################################################
+Para não alterar o resolv.conf
+chattr +a /etc/resolv.conf
+
+systemctl restart network
+systemctl restart named.service
+
+#########################################################################################
+Duplicar as linha do arquivo  nano /etc/security/limits.d/oracle-database-preinstall-19c.conf
+# oracle-database-preinstall-19c setting for nofile soft limit is 1024
+oracle   soft   nofile    1024
+grid   soft   nofile    1024
+
+# oracle-database-preinstall-19c setting for nofile hard limit is 65536
+oracle   hard   nofile    65536
+grid   hard   nofile    65536
+# oracle-database-preinstall-19c setting for nproc soft limit is 16384
+# refer orabug15971421 for more info.
+oracle   soft   nproc    16384
+grid   soft   nproc    16384
+
+# oracle-database-preinstall-19c setting for nproc hard limit is 16384
+oracle   hard   nproc    16384
+grid   hard   nproc    16384
+
+# oracle-database-preinstall-19c setting for stack soft limit is 10240KB
+oracle   soft   stack    10240
+grid   soft   stack    10240
+
+# oracle-database-preinstall-19c setting for stack hard limit is 32768KB
+oracle   hard   stack    32768
+grid   hard   stack    32768
+
+# oracle-database-preinstall-19c setting for memlock hard limit is maximum of 128GB on x86_64 or$
+oracle   hard   memlock    134217728
+grid   hard   memlock    134217728
+
+# oracle-database-preinstall-19c setting for memlock soft limit is maximum of 128GB on x86_64 or$
+oracle   soft   memlock    134217728
+grid   soft   memlock    134217728
+
+# oracle-database-preinstall-19c setting for data soft limit is 'unlimited'
+oracle   soft   data    unlimited
+grid   soft   data    unlimited
+
+# oracle-database-preinstall-19c setting for data hard limit is 'unlimited'
+oracle   hard   data    unlimited
+grid   hard   data    unlimited
+
+./runcluvfy.sh stage -pre crsinst -n orarac1,orarac2 -verbose -orainv oinstall
+#########################################################################################
+
+Criar Database
+mkdir -p /u01/app/oracle/product/19c/dbhome_1
+chown -R oracle.oinstall /u01/app/oracle/product

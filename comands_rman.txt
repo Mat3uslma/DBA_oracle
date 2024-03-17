@@ -1,0 +1,66 @@
+-- Permite 2 backups 
+configure retention policy to redundancy 2;
+
+-- Permite armazenar Backups Feito no intervalo de 7 dias backups feitos a mais de 7 dias ficara obsoleto--
+configure retention policy to recovery window of 7 days;
+
+
+-- Backup database comprimido gerando um arquivo Maior, porem Mais rapido para conclusão de  concluir o backup
+run{
+CONFIGURE COMPRESSION ALGORITHM 'LOW';
+BACKUP AS COMPRESSED BACKUPSET DATABASE PLUS ARCHIVELOG;
+
+-- Backup database comprimido Um pouco mias rapido e com tamanho inferior ao (LOW)
+run{
+CONFIGURE COMPRESSION ALGORITHM 'high';
+BACKUP AS COMPRESSED BACKUPSET DATABASE PLUS ARCHIVELOG;
+}}
+
+
+-- Backup database comprimido gerando um arquivo menor, porem demora mais para concluir o backup
+run{
+CONFIGURE COMPRESSION ALGORITHM 'high';
+BACKUP AS COMPRESSED BACKUPSET DATABASE PLUS ARCHIVELOG;
+}
+
+-- Configurações iniciais do RMAN
+CONFIGURE RETENTION POLICY TO RECOVERY WINDOW OF 7 DAYS;
+
+CONFIGURE DEFAULT DEVICE TYPE TO DISK;
+
+CONFIGURE CONTROLFILE AUTOBACKUP ON;
+
+CONFIGURE CHANNEL DEVICE TYPE DISK FORMAT '/backups/MYSID/%d_DB_%u_%s_%p';The AS COMPRESSED BACKUPSET option can be used explicitly in the backup command:
+
+# Whole database and archivelogs.
+
+BACKUP AS COMPRESSED BACKUPSET DATABASE PLUS ARCHIVELOG;
+
+# Datafiles 1 and 5 only.
+
+BACKUP AS COMPRESSED BACKUPSET DATAFILE
+
+# Configure compression.
+
+CONFIGURE DEVICE TYPE DISK PARALLELISM 1 BACKUP TYPE TO COMPRESSED BACKUPSET;
+
+# Whole database and archivelogs.
+
+BACKUP DATABASE PLUS ARCHIVELOG;
+
+--Backup incremental--
+backup as compressed backupset incremental level 0 database plus archivelog tag 'BackupFull';
+backup as compressed backupset incremental level 1 database plus archivelog tag 'Diferencial';
+
+--bakcups archives--
+BACKUP ARCHIVELOG ALL;
+BACKUP ARCHIVELOG ALL NOT BACKED UP;
+BACKUP ARCHIVELOG ALL DELETE ALL INPUT;
+
+
+
+-- REPARO AUTOMATICO--
+LIST FAILURE;
+ADVISE FAILURE;
+repair failure preview;
+REPAIR FAILURE;

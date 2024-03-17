@@ -1,0 +1,120 @@
+yum install -y oracleasm-support
+
+
+Criar usuario GRID e grupos especificos
+groupadd -g 507 asmdba
+groupadd -g 509 asmadmin
+groupadd -g 508 asmoper
+useradd -m -u 501 -g oinstall -G dba,asmadmin,asmdba,asmoper -d /home/grid -s /bin/bash grid
+passwd grid  # setas password grid
+
+
+
+criar discos 
+
+fdisk /dev/sdb
+fdisk /dev/sdc
+n
+1
+pula os 2 
+w
+
+criar pastas e dar permissoes para as pastas e usuarios especificos
+
+mkdir -p mkdir -p /u01/app/oracle/product/21c/dbhome_1
+mkdir -p  /u01/app/oracle/product/19.0.0/gridhome_1
+chown -R grid:oinstall /u01/app/oracle/product/19.0.0/gridhome_1
+chown -R grid:oinstall /u01/
+chmod -R 775 /u01/
+
+criar os disks do ASM
+
+oracleasm init
+cd /dev/oracleasm/disks
+oracleasm createdisk DATA_00 /dev/sdb1	
+oracleasm createdisk DATA_01 /dev/sdc1
+
+seta algumas config do oracleasm
+
+oracleasm configure -i
+grid
+asmadmin
+y
+y
+
+dar permissoes para pastas
+oracleasm scandisks
+chown -R grid:oinstall /dev/oracleasm/disks/
+chown -R oracle:oinstall /dev/oracleasm/disks/
+chown -R 775 /dev/oracleasm/disks/
+
+oracleasm configure
+
+logo apos concluir as config baixar o pacote de grid e dar um unzip
+https://www.oracle.com/database/technologies/oracle19c-linux-downloads.html
+
+cd /u01/app/oracle/product/19.0.0/gridhome_1/cv/rpm
+rpm -Uvh cvuqdisk-1.0.10-1.rpm
+cd /u01/app/oracle/product/19.0.0/gridhome_1
+./gridSetup.sh
+
+
+INTERFACE GRAFICA
+
+PASSO 1
+segunda opção
+
+PASSO 2
+disk group name = DATA
+redundacy = EXTERNAL
+CHANGE DISCOVERY PATH  /dev* ex= /dev/oracleasm/disks
+seleciona o DISK01 E DISK02 QUE CRIOU ANTES
+
+PASSO 3
+Colocar senha para serviços SYS E ASMSNMP
+
+PASSO 4
+Não prenche 
+
+PASSO 5
+Não prencher
+
+PASSO 6
+DEFAULT
+
+PASSO 7
+DEFAULT
+
+PASSO 8 
+Senha root para rodar os scripts
+
+POR FIM INSTALAR E AGUARDA FINALIZAR
+
+
+ORACLE
+export TMP=/tmp
+export TMPDIR=/$TMP
+export ORACLE_HOSTNAME=localhost.localdomain
+export ORACLE_UNQNAME=labteste
+export ORACLE_BASE=/u01/app/oracle
+export ORACLE_HOME=$ORACLE_BASE/product/19.0.0/dbhome_1
+export GRID_HOME=$ORACLE_BASE/product/19.0.0/gridhome_1
+export ORACLE_SID=orcl
+export ORACLE_TERM=xterm
+export PATH=/usr/sbin:/usr/local/bin:/$PATH
+export PATH=$ORACLE_HOME/bin:/$PATH
+export LD_LIBRARY_PATH=/$ORACLE_HOME/lib:/lib:/usr/lib
+export CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jli
+
+GRID
+export ORACLE_SID=+ASM
+export ORACLE_BASE=/u01/app/oracle
+export GRID_HOME=$ORACLE_BASE/product/19.0.0/gridhome_1
+export ORACLE_HOME=$GRID_HOME
+PATH=$ORACLE_HOME/bin:$PATH; 
+export PATH
+export PATH=/usr/sbin:/usr/local/bin:/$PATH
+LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib; 
+export LD_LIBRARY_PATH
+CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib; 
+export CLASSPATH

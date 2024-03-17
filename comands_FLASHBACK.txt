@@ -1,0 +1,7 @@
+select * from flashback_on;
+alter database flashback;
+
+create restore point * guarantee flashback database;
+
+
+flashback pluggable database * to restore point *;

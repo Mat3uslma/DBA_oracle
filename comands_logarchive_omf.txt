@@ -1,0 +1,17 @@
+LOG_ARCHIVE_FORMAT = 'log%t_%s_%r.arc'
+
+As seguintes variáveis ​​podem ser usadas no formato:
+
+%snúmero de sequência de registro
+
+%Snúmero de sequência de log, zero preenchido
+
+%tnúmero do tópico
+
+%Tnúmero do thread, zero preenchido
+
+%aID de ativação
+
+%dID do banco de dados
+
+ORA-19905: log_archive_format deve conter %s, %t e %r

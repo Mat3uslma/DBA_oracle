@@ -1,0 +1,228 @@
+-- Tablespace Oracle - Parte 2
+
+--> Ambiente 
+
+S.O: Oracle Linux Server release 7.5
+Oracle: 19c 
+Onde se aplica:
+	- versão 10g e superiores
+	- Single Instance e RAC
+	- NonCDB e CDB
+	
+
+--> Gerenciando Tablespaces e Datafiles
+	- Ajustando tablespaces
+		redimencionando datafiles
+		adicionando datafiles
+		alterando definição de tablespaces 
+		alterando definição de datafiles
+	- Renomeando ou alterando localização de datafiles
+
+
+
+--> Visualizando informações 
+
+set linesize 500;
+set pagesize 5000;
+column namet format a10
+column named format a50
+SELECT d.file#
+	,d.name named
+	,t.name namet
+	,d.STATUS
+	,d.enabled
+FROM v$datafile d
+	,v$tablespace t
+WHERE d.ts# = t.ts#
+UNION
+SELECT d.file#
+	,d.name named
+	,t.name namet
+	,d.STATUS
+	,d.enabled
+FROM v$tempfile d
+	,v$tablespace t
+WHERE d.ts# = t.ts#
+ORDER BY 3;
+
+
+1 - Ajustando tablespaces
+
+-> redimencionando datafiles
+
+SET linesize 130
+SET pagesize 500
+SELECT df.tablespace_name tablespace
+	,df.total_space_mb total_space_mb
+	,(df.total_space_mb - fs.free_space_mb) used_space_mb
+	,fs.free_space_mb free_space_mb
+	,round(100 * (fs.free_space / df.total_space), 2) "livre_%"
+FROM (
+	SELECT tablespace_name
+		,sum(bytes) total_space
+		,round(sum(bytes) / 1048576) total_space_mb
+	FROM dba_data_files
+	GROUP BY tablespace_name
+	) df
+	,(
+		SELECT tablespace_name
+			,sum(bytes) free_space
+			,round(sum(bytes) / 1048576) free_space_mb
+		FROM dba_free_space
+		GROUP BY tablespace_name
+		) fs
+WHERE df.tablespace_name = fs.tablespace_name(+)
+ORDER BY 5;
+
+
+- permanente
+SET PAGESIZE 1000
+SET LINESIZE 150
+SET TIMING ON
+COL name FORMAT A20 HEAD "TABLESPACE"
+COL file_name FORMAT A60 HEAD "DATA_FILE"
+COL a FORMAT 999999999999 HEAD "TAMANHO(MB)"
+COL b FORMAT 999999999999 HEAD "USADO(MB)"
+COL c FORMAT 999999999999 HEAD "LIVRE(MB)"
+COL d FORMAT A11 HEAD "%_USADO"
+COL e FORMAT A3 HEAD "AUTO_EXTENSIVO"
+COL f FORMAT 999999999999 HEAD "MAXIMO(MB)"
+BREAK ON REPORT
+COMPUTE SUM OF KBYTES ON REPORT
+COMPUTE SUM OF FREE ON REPORT
+COMPUTE SUM OF USED ON REPORT
+SELECT df.file_id
+	,Substr(Df.tablespace_name, 1, 20) Name
+	,Df.file_name
+	,Round(df.bytes / 1024 / 1024, 2) a
+	,Round(e.used_bytes / 1024 / 1024, 2) b
+	,Round(f.free_bytes / 1024 / 1024, 2) c
+	,Rpad(' ' || Rpad('X', Round(e.used_bytes * 10 / df.bytes, 0), 'X'), 11, '-') D
+	,df.autoextensible e
+	,Round(maxbytes / 1024 / 1024, 2) F
+FROM dba_data_files DF
+	,(
+		SELECT file_id
+			,SUM(Decode(bytes, NULL, 0, bytes)) used_bytes
+		FROM dba_extents
+		GROUP BY file_id
+		) E
+	,(
+		SELECT Max(bytes) free_bytes
+			,file_id
+		FROM dba_free_space
+		GROUP BY file_id
+		) f
+WHERE e.file_id(+) = df.file_id
+	AND df.file_id = f.file_id(+)
+	AND Df.tablespace_name IN ('SYSTEM')
+ORDER BY Df.tablespace_name
+	,Df.file_name;
+
+ 
+- temporaria
+set pagesize 500
+set linesize 150
+Col Name     Format A20         Head "Tablespace"
+Col File_name Format A60         Head "Data File"
+Col A Format 999999999999 Head "Tamanho (M)"
+Col B Format 999999999999 Head "Usado (M)"
+Col C Format 999999999999 Head "Livre (M)"
+Col D Format a11 Head "% Usado"
+Col e Format A3         Head "Auto extensivo"
+Col F Format 999999999999 Head "Maximo (M)"
+break   on report
+compute sum of kbytes on report
+compute sum of free on report
+compute sum of used on report
+SELECT Substr(DFT.Tablespace_Name, 1, 20) Name
+	,DFT.File_Name
+	,Round(DFT.bytes / 1024 / 1024, 2) a
+	,Round(e.used_bytes / 1024 / 1024, 2) b
+	,Round(f.free_bytes / 1024 / 1024, 2) c
+	,Rpad(' ' || Rpad('X', Round(e.used_bytes * 10 / DFT.bytes, 0), 'X'), 11, '-') D
+	,DFT.AUTOEXTENSIBLE e
+	,Round(maxbytes / 1024 / 1024, 2) F
+FROM DBA_TEMP_FILES DFT
+	,(
+		SELECT file_id
+			,Sum(Decode(bytes, NULL, 0, bytes)) used_bytes
+		FROM dba_extents
+		GROUP BY file_id
+		) E
+	,(
+		SELECT Max(bytes) free_bytes
+			,file_id
+		FROM dba_free_space
+		GROUP BY file_id
+		) f
+WHERE e.file_id(+) = DFT.file_id
+	AND DFT.file_id = f.file_id(+)
+ORDER BY DFT.Tablespace_Name
+	,DFT.File_Name;
+
+-
+
+alter database datafile '/u01/app/oracle/oradata/ORCL19C/system01.dbf' resize 1500m;
+-
+alter database tempfile '/u01/app/oracle/oradata/ORCL19C/temp01.dbf' resize 1000m;
+
+
+-> adicionando datafiles/tempfile
+
+alter tablespace TS_PERMANENTE add datafile '/u01/app/oracle/oradata/ORCL19C/ts_permanente02.dbf' size 100m autoextend on next 10m maxsize unlimited;
+--RAC 
+alter tablespace TS_PERMANENTE add datafile '+DATA' size 100m autoextend on next 10m maxsize unlimited;
+
+-
+
+alter tablespace TS_TEMPORARIA add tempfile '/u01/app/oracle/oradata/ORCL19C/ts_temporaria02.dbf' size 100m autoextend on next 10m maxsize unlimited;
+--RAC 
+alter tablespace TS_TEMPORARIA add tempfile '+DATA' size 100m autoextend on next 10m maxsize unlimited;
+
+
+-> dropando datafiles/tempfile
+alter tablespace TS_PERMANENTE drop datafile '/u01/app/oracle/oradata/ORCL19C/ts_permanente02.dbf';
+
+-
+
+alter tablespace TS_TEMPORARIA drop tempfile '/u01/app/oracle/oradata/ORCL19C/ts_temporaria02.dbf';
+
+
+-> alterando definição de datafiles/tempfile
+
+alter database datafile '/u01/app/oracle/oradata/ORCL19C/ts_permanente01.dbf' autoextend off;
+
+alter database datafile '/u01/app/oracle/oradata/ORCL19C/ts_permanente01.dbf' autoextend on next 10m maxsize 1g;
+
+alter database datafile '/u01/app/oracle/oradata/ORCL19C/ts_permanente01.dbf' autoextend on next 1g maxsize unlimited;
+
+-
+
+alter database tempfile '/u01/app/oracle/oradata/ORCL19C/ts_temporaria01.dbf' autoextend off;
+
+alter database tempfile '/u01/app/oracle/oradata/ORCL19C/ts_temporaria01.dbf' autoextend on next 10m maxsize 1g;
+
+alter database tempfile '/u01/app/oracle/oradata/ORCL19C/ts_temporaria01.dbf' autoextend on next 10m maxsize unlimited;
+
+
+-> outros comandos uteis
+
+alter tablespace "nome antigo" rename to "nome novo";
+-
+alter tablespace "nome tablespace" read only;
+-
+alter tablespace "nome tablespace" read write;
+-
+alter tablespace "TS_PERMANENTE" offline;
+alter tablespace "TS_PERMANENTE" online;
+
+
+2 - Renomeando ou alterando localização de datafiles
+
+alter database rename file '/u01/app/oracle/oradata/ORCL19C/ts_permanente01.dbf' to '/u01/app/oracle/oradata/ORCL19C/ts_permanente01-a.dbf';
+
+ou 
+
+alter database rename file '/u01/app/oracle/oradata/ORCL19C/ts_permanente01-a.dbf' to '/home/oracle/ts_permanente01-a.dbf';
+

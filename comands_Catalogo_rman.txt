@@ -1,0 +1,18 @@
+ALTER SESSION SET CONTAINER= ORCLRMAN
+ALTER DATABASE OPEN;
+
+
+CREATE  TABLESPACE TBS_CATALOGO DATAFILE'tbs_catalogo.dbf'  SIZE 100M autoextend on next  100M maxsize unlimited
+
+
+CREATE USER rman_catalog IDENTIFIED BY catalog
+default tablespace tbs_catalogo
+quota unlimited on tbs_catalogo
+
+
+GRANT RECOVERY_CATALOG_OWNER TO rman_catalog
+
+COnfigurar o tnsnames na maquina
+Fazer um tnsping no host
+
+rman target / catalog rman_catalog/catalog@orclrman

@@ -1,0 +1,211 @@
+#########################################################################################
+systemctl stop firewalld
+systemctl disable firewalld
+vi /etc/selinux/config
+permissive
+
+yum -y install nano 
+yum install -y oracleasm-support
+yum -y install oracle-database-preinstall-19c
+
+
+#########################################################################################
+Criar usuario GRID e grupos especificos
+groupadd -g 507 asmdba
+groupadd -g 509 asmadmin
+groupadd -g 508 asmoper
+useradd -m -u 501 -g oinstall -G dba,asmadmin,asmdba,asmoper -d /home/grid -s /bin/bash grid
+
+passwd grid  
+
+
+#########################################################################################
+criar discos 
+fdisk /dev/sdb
+fdisk /dev/sdc
+
+
+#########################################################################################
+criar pastas e dar permissoes para as pastas e usuarios especificos
+mkdir -p  /u01/app/oracle/product/19.0.0/dbhome_1
+mkdir -p  /u01/app/oracle/product/19.0.0/gridhome_1
+mkdir -p  /u01/app/grid_base
+chown -R grid:oinstall /u01/app/grid/product/19.0.0/gridhome_1
+chown -R oracle:oinstall /u01 
+chown -R grid:oinstall /u01 
+chmod -R 775 /u01/
+
+#########################################################################################
+oracleasm init
+cd /dev/oracleasm/disks
+oracleasm createdisk DATA_00 /dev/sdb1	
+oracleasm createdisk DATA_01 /dev/sdb1
+
+
+
+dar permissoes para pastas
+
+oracleasm scandisks
+chown -R grid:oinstall /dev/oracleasm/disks/
+chown -R oracle:oinstall /dev/oracleasm/disks/
+chown -R 775 /dev/oracleasm/disks/
+
+oracleasm configure -i
+
+
+
+#########################################################################################
+nano /etc/hosts
+
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+# Plublic
+192.168.24.1	rac01.localdomain	rac01
+192.168.24.2	rac02.localdomain	rac02
+
+# Private
+192.168.100.1	rac01-priv.localdomain	rac01-priv
+192.168.100.2	rac02-priv.localdomain	rac02-priv
+
+# Virtual
+192.168.24.10	rac01-vip.localdomain	rac01-vip
+192.168.24.20	rac02-vip.localdomain	rac02-vip
+
+# Scan
+192.168.24.31	rac-scan.localdomain	rac-scan
+192.168.24.32	rac-scan.localdomain	rac-scan
+192.168.24.33	rac-scan.localdomain	rac-scan
+
+#########################################################################################
+
+PLACAS DE REDE TEM QUE ESTA DESSE JEITO
+
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+# Plublic
+192.168.1.100	rac01.localdomain	rac01
+192.168.1.102	rac02.localdomain	rac02
+
+# Private
+192.168.100.1	rac01-priv.localdomain	rac01-priv
+192.168.100.2	rac02-priv.localdomain	rac02-priv
+
+# Virtual
+192.168.1.110	rac01-vip.localdomain	rac01-vip
+192.168.1.111	rac02-vip.localdomain	rac02-vip
+
+# Scan
+192.168.1.113	rac-scan.localdomain	rac-scan
+192.168.1.114	rac-scan.localdomain	rac-scan
+192.168.1.115	rac-scan.localdomain	rac-scan
+#########################################################################################
+LEMBRAR DE ATIVAR AS PLACAS DE REDE ANTES DE RODA O ./GRID
+
+#########################################################################################
+# obs: a rede virtual tem que estar na mesma subrede do ip plublico que sai para internet 
+a rede interna voce mesmo pode criar para os server se comunicar cinernamente
+
+#########################################################################################
+Relação de segurança SSh
+user: Grid
+Acessar a pasta deinstall dentro do $ORACLE_BASE
+
+#########################################################################################
+cd /u01/app/oracle/product/19.0.0/gridhome_1/cv/rpm
+rpm -Uvh cvuqdisk-1.0.10-1.rpm
+cd /u01/app/oracle/product/19.0.0/gridhome_1/deinstall
+./sshUserSetup.sh -user grid -hosts "rac01 rac02" -nPromptPassphrase -confirm -advanced
+
+
+
+chown -R grid:oinstall /u01/app/oracle/product/19.0.0/gridhome_1
+
+#########################################################################################
+
+
+Configurar o dns por conta de suas maquinas ser Virtual 
+yum -y install bind
+nan /etc/named.conf
+
+zone "localdomain" {
+type master;
+file "localdomain.zone";
+allow-update { nne; };
+};
+
+zone "1.168.192.in.addr.arpa." {
+type master;
+file "1.168.192.in.addr.arpa";
+allow-update { nne; };
+};
+
+#########################################################################################
+
+Agora Criar um arquivo vi /var/named/* nme que coloco n file acima ex: localdomain.zone
+
+$TTL	86400
+@		IN SOA localhost root.localhost (
+					42		; serial (d. adams)
+					3H		; refresh
+					15M		; retry
+					1W		; expiry
+					1D )		; minimum
+@		   NS	 localhost.localdomain.
+localhost	   A	 127.0.0.1
+oemlinux	   A 	 192.168.100.6
+inxdns		   A	 192.168.100.7
+n1		   A	 192.168.1.19 
+n2	           A	 192.168.1.18
+n1-priv	   A	 192.168.10.1
+n2-priv    A	 192.168.10.2
+n1-vip	   A	 192.168.1.41
+n2-vip	   A	 192.168.1.42
+nerv-scan	   A	 192.168.1.101
+nerv-scan	   A	 192.168.1.102
+nerv-scan	   A	 192.168.1.103
+#########################################################################################
+
+Criar o dns reverso Citado acima
+1.168.192.in.addr.arpa
+
+vi /var/named/nme_arquivo ex:1.168.192.in.addr.arpa
+
+$ORIGIN 1.168.192.in.addr.arpa.
+$TTL 1H
+@	IN	SOA	n1.localdomain.	root.n1.localdomain. (
+						3H
+						1H
+						1W
+						1H )
+1.168.192.in.addr.arpa. 	IN NS	  n1.localdomain.
+@IN PTR localdomain.
+n1 IN A 192.168.1.19
+n2 IN A 192.168.1.18
+nerv-scan IN A 192.168.1.101
+nerv-scan IN A 192.168.1.102
+nerv-scan IN A 192.168.1.103
+1    IN PTR n1.localdomain.
+2    IN PTR n2.localdomain.
+171  IN PTR nerv-scan.localdomain.
+172  IN PTR nerv-scan.localdomain.
+173  IN PTR nerv-scan.localdomain.
+41   IN PTR n1-vip.
+42   IN PTR n2-vip.
+
+#########################################################################################
+
+Edita o vi /etc/resolv.conf
+e coloca o Seu ip publico como dns por conta de ser uma maquina virtual
+n1 nameserver 192.168.1.19
+n2 namerserver 192.168.1.18
+
+#########################################################################################
+Para não alterar o resolv.conf
+chattr +a /etc/resolv.conf
+
+
+
+
+

@@ -1,0 +1,31 @@
+create or replace directory exp_dumps as '/home/oracle/bkp';
+
+GRANT READ,WRITE ON directory exp_dumps to SYSTEM;
+
+expdp  system/oracle@orclrman  DIRECTORY=exp_dumps dumpfile=dba010.dmp logfile=dba010.log FLASHBACK_TIME=systimestamp full=y
+impdp  system/oracle@orclrman DIRECTORY=exp_dumps dumpfile=dba01.dmp logfile=dba0a1.log  schemas='dba01'
+expdp system/oracle@orclrman  ESTIMATE_ONLY=YES NOLOGFILE=YES SCHEMAS='DBA01'
+COMPRESSION=YES
+ESTIMATE_ONLY=YES
+
+DROP USER DBA001 CASCADE;
+
+CREATE USER dba01 IDENTIFIED BY oracle;
+ALTER USER dba01 DEFAULT TABLESPACE USERS;
+ALTER USER dba01 TEMPORARY TABLESPACE TEMP;
+ALTER USER dba01 QUOTA UNLIMITED ON USERS;
+GRANT CREATE SESSION, CONNECT TO dba01;
+
+CREATE TABLESPACE tb 
+   DATAFILE 'tbs.dbf' 
+   SIZE 1m;
+
+
+
+select * from dba_directories
+
+alter session set container=orclrman;
+alter session set container=cdb$root;
+select username from dba_users where username='dba01';
+select * from dba_tablespaces;
+select username from dba_users;

@@ -1,0 +1,17 @@
+  -silent -createDatabase  
+  -templateName "my_custom_template.dbt"             
+  -gdbName "orcl19c.br.oracle.com"                        
+  -characterSet "US7ASCII"                         
+  -createAsContainerDatabase "false"                 
+  -databaseConfigType SINGLE                         
+  -databaseType MULTIPURPOSE                         
+  -automaticMemoryManagement "false"                 
+  -totalMemory "4096"                                  
+  -emConfiguration "NONE"                            
+  -redoLogFileSize "100M"                 
+  -sampleSchema "false"                              
+  -sid "orcl"                               
+  -sysPassword "oracle"                          
+  -systemPassword "oracle"                    
+  -useOMF "false"                                    
+  -variablesFile /home/oracle/my_variable_dbca.txt   

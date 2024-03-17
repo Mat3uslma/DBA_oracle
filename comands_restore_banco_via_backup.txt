@@ -1,0 +1,47 @@
+backup database plus archivelog;
+
+run{
+shutdown abort;
+startup nomount;
+restore controlfile from ‘/backup/RMAN_BKP/RMAN_CTL_PROD_20200406_7_1_07ut04r7.bkp’;
+alter database mount;
+set until time “to_date(‘2020-04-06 21:30:00′,’YYYY-MM-DD HH24:MI:SS’)”;
+restore database;
+recover database;
+alter database open resetlogs;
+}
+
+run {
+restore datafile 1;
+restore datafile 3;
+restore datafile 4;
+restore datafile 7;
+}
+
+restore controlfile from autobackup;
+catalog start with '/u02/oradata/ORCL/backupset/2023_12_13/';
+crosscheck backup;
+
+
+RESTORE DE UM BANCO DE DADOS DO ZERO
+
+backup database plus archivelog;
+mkdir -p /u01/app/oracle/product/19.0.0/dbhome_1
+mkdir -p /u02/oradata
+chmod -R 775 /u01 /u02
+mkdir -p  /u01/app/oracle/admin/orcl/adump
+chown -R oracle:oinstall /u01 /u02
+systemctl stop firewalld
+systemctl disable firewalld
+
+export ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1
+export PATH=$ORACLE_HOME/bin:$PATH:.
+
+sqlplus rman_catalog/catalog@orclrman
+rman target / catalog  rman_catalog/catalog@orclrman
+
+alter system set db_recovery_file_dest_size=10G scope=both sid='*';
+alter system set db_recovery_file_dest='/u02/oradata/ORCL/autobackup/' scope=both sid='*';
+
+
+

@@ -1,0 +1,9 @@
+ALTER TABLE OS
+ADD CONSTRAINT cliente_cod_cliente_fk 
+  FOREIGN KEY (cod_cliente)
+  REFERENCES cliente(cod_cliente);
+
+ALTER TABLE vendas
+ADD id_fornecedor int CONSTRAINT fornecedor_fk 
+  REFERENCESfornecedor(id_fornecedor);
+

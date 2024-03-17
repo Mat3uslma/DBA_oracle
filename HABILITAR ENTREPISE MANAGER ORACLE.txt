@@ -1,0 +1,50 @@
+-- Ativando o Enterprise Manager Express Oracle 
+
+--> Ambiente 
+
+S.O: Oracle Linux Server release 7.5
+Oracle: 19c
+
+--> Referencia:
+
+https://docs.oracle.com/en/cloud/paas/database-dbaas-cloud/csdbi/access-em-database-express-12c.html
+
+--> comando para verificar porta http					 
+
+select dbms_xdb.getHttpPort() from dual;
+
+
+--> comando para verificar porta https					 
+
+select dbms_xdb_config.getHttpsPort() from dual;
+
+
+--> comando para modificar porta http					 
+
+exec dbms_xdb_config.sethttpport(0);
+lsnrctl status | grep -i 5500
+
+
+--> comando para modificar porta https tanto em NonCDB quanto em CDB	
+				 
+exec dbms_xdb_config.sethttpsport(5500);
+lsnrctl status | grep -i 5500
+
+
+--> Habilitar no PDB
+
+alter session set container=ORCLPDB;
+exec dbms_xdb_config.sethttpsport(5501);
+lsnrctl status | grep -i 5501
+
+--> como acessar 
+Obs: firewall da maquina precisa estar desabilitado, executar como root 
+systemctl stop firewalld
+systemctl disable firewalld
+
+-- link
+CDB
+https://192.168.1.78:5500/em
+
+PDB01
+https://192.168.1.78:5501/em

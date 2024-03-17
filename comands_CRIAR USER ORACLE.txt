@@ -1,0 +1,76 @@
+Oracle Database: Criando Usuários
+
+- Ambiente
+S.O: Oracle Linux 7
+SGBD: Oracle 19c 
+Banco: Single Instance com Multitenant (CDB, PDB)
+
+
+----> Non-CDB e PDB 
+
+--> Consultar usuarios existentes
+
+ALTER SESSION SET CONTAINER=PDB01;
+
+SET LINESIZE 300;
+SET PAGESIZE 1000;
+SELECT username, account_status, default_tablespace, temporary_tablespace, profile, created
+FROM dba_users
+WHERE username in ('DBA01') 
+order by username;
+
+
+--> Se for PDB 
+
+ALTER SESSION SET CONTAINER=PDB01;
+
+
+--> Criar usuario 
+
+CREATE USER dba01 IDENTIFIED BY dba01;
+ALTER USER dba01 DEFAULT TABLESPACE TBS_DATA;
+ALTER USER dba01 TEMPORARY TABLESPACE TEMP;
+ALTER USER dba01 QUOTA UNLIMITED ON TBS_DATA;
+GRANT CREATE SESSION, CONNECT TO dba01;
+
+CREATE USER dba02 IDENTIFIED BY dba01
+DEFAULT TABLESPACE USERS 
+TEMPORARY TABLESPACE TEMP
+QUOTA UNLIMITED ON USERS
+ACCOUNT UNLOCK;
+GRANT CREATE SESSION, CONNECT TO dba01;
+
+--> Alterando a senha do usuário
+
+ALTER USER dba01 IDENTIFIED BY oracle;
+
+
+--> Dropando um usuario do banco e seus objetos (se houver)
+
+DROP USER dba01 CASCADE;
+
+
+----> CDB
+
+CREATE USER c##dba01 IDENTIFIED BY dba01 CONTAINER=ALL;
+ALTER USER c##dba01 DEFAULT TABLESPACE SYSAUX;
+ALTER USER c##dba01 TEMPORARY TABLESPACE TEMP;
+ALTER USER c##dba01 QUOTA UNLIMITED ON SYSAUX;
+GRANT CREATE SESSION, CONNECT TO c##dba01 CONTAINER=ALL;
+
+CREATE USER c##dba02 IDENTIFIED BY dba02
+DEFAULT TABLESPACE SYSAUX 
+TEMPORARY TABLESPACE TEMP
+QUOTA UNLIMITED ON SYSAUX
+CONTAINER=ALL
+ACCOUNT UNLOCK;
+
+
+--> Alterando a senha do usuário
+
+ALTER USER c##dba01 IDENTIFIED BY dba01;
+
+
+--> Dropando um usuario do banco e seus objetos(se houver)
+
+DROP USER c##dba02 CASCADE; # DROPAR USUARIO 

@@ -1,0 +1,9 @@
+Como Alterar o nome do Banco de dados
+
+select name from v$database;
+shutdown immediate;
+startup mount quiet restrict;
+host
+
+nid target=system/oracle DBNAME=CDB1DR setname=Y
+Depois temos que alterar o parametro db_name no pfile 

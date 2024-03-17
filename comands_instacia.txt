@@ -1,0 +1,35 @@
+ Como descobrir a versão do SGBD de uma determinada instância:
+select * from v$version;
+
+#######################################################################
+Se for Oracle 12c, como descobrir os nomes dos PDBs existentes e se eles estão abertos?
+select CON_ID, NAME, OPEN_MODE, OPEN_TIME 
+         from V$PDBS;
+
+#######################################################################
+
+ Como descobrir se o modo archivelog está habilitado e onde os archives estão sendo gerados?
+select LOG_MODE from v$database;
+SHOW PARAMETER LOG_ARCHIVE_DEST
+
+
+#######################################################################
+Como descobrir quais parâmetros foram configurados na instância, que estão com valores diferentes do padrão e quais valores foram configurados para cada um deles?
+
+SELECT NAME, VALUE, DISPLAY_VALUE, DESCRIPTION
+         FROM V$PARAMETER WHERE ISDEFAULT = 'FALSE';
+
+#######################################################################
+Como descobrir o tamanho atual do BD?
+
+Select  round(sum(used.bytes) / 1024 / 1024/1024 ) || ' GB' "Database Size",
+             round(free.p / 1024 / 1024/1024) || ' GB' "Free space"
+     from    (select bytes from v$datafile
+              union all
+              select bytes 
+              from v$tempfile
+              ) used,   
+              (select sum(bytes) as p from dba_free_space) free
+     group by free.p;
+
+#######################################################################

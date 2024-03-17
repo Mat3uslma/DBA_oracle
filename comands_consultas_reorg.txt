@@ -1,0 +1,155 @@
+select owner,table_name,round((blocks*8),2)/1024/1024 "size (Gb)" , 
+round((num_rows*avg_row_len/1024),2)/1024/1024 "actual_data (Gb)",
+(round((blocks*8),2) - round((num_rows*avg_row_len/1024),2))/1024/1024 "wasted_space (Gb)"
+from dba_tables
+where 
+(round((blocks*8),2) > round((num_rows*avg_row_len/1024),2))
+and 
+table_name in 
+(select segment_name from (select owner, segment_name, bytes/1024/1024 meg from dba_segments
+where tablespace_name ='SIAGRI_DATA'  AND
+segment_type = 'TABLE'
+order by bytes/1024/1024 desc) 
+where rownum <= 20)
+order by 5 desc;
+
+######################################################################################################
+SELECT TABLESPACE_NAME, SUM(BYTES)/1024/1024 AS ''TAMANHO(MB)''
+FROM DBA_DATA_FILES
+GROUP BY TABLESPACE_NAME
+OREDER BY SUM(BYTES);
+
+######################################################################################################
+REM Showing segments which do have extents above specified size
+REM
+REM No block_id/location in file is shown due to fact that the
+REM segment itself is blocking and not a specific extent.
+REM
+REM Input parameters:
+REM &file_id - file_id of file to check
+REM &file_size - desired size of file to shrink to (nnG/nnM/nnK/nn)
+REM
+REM Script meant for Oracle 10 and higher
+REM in case of version lower then Oracle 10 comment out the lines as indicated
+
+set serveroutput on size 1000000
+
+declare
+  file_blocks number;
+  file_id number;
+  file_name dba_data_files.file_name%type:=NULL;
+  file_size varchar2(100);
+  file_block_size number:=0;
+  yesno boolean:=TRUE;
+
+  invalid_file_id exception;
+  invalid_file_size exception;
+
+cursor c_blocksize (fno in number) is
+  select t.block_size, d.file_name
+  from dba_tablespaces t, dba_data_files d
+  where d.file_id=fno
+  and   d.tablespace_name=t.tablespace_name;
+
+cursor c_segments (fno in number, block in number) is
+select distinct owner,segment_name,partition_name,segment_type
+from   dba_extents
+where  file_id=fno
+and    block_id >= block
+order  by owner,segment_name;
+
+/* in case of version lower then Oracle 10 comment out following 6 lines!! */
+cursor c_recyclebin (fno in number, block in number) is
+select username,original_name,partition_name
+from   recyclebin$, dba_users
+where  file#=fno
+and    block# >= block
+and    owner#=user_id;
+
+begin
+  file_id:=&file_id;
+  file_size:='&file_size_char';
+
+  dbms_output.put_line('.');
+
+  /* check if correct file is provided and what blocksize is of tablespace */
+  for c_check_blocksize in c_blocksize (file_id)
+  loop
+    file_block_size:=c_check_blocksize .block_size;
+    file_name:=c_check_blocksize.file_name;
+  end loop;
+
+  if file_name is NULL
+  then
+    raise invalid_file_id;
+  end if;
+
+  /* check if a correct filesize is provided */
+  <<isnumber>>
+  for i in 1..length(file_size)
+  loop
+    if (ascii(substr(file_size,i,1)) between 48 and 57)
+    then
+       null; /* number */
+    else
+      yesno:=FALSE;
+      exit isnumber;
+    end if;
+   end loop;
+
+  if (length(file_size) != instr(upper(file_size),'G'))
+     AND (length(file_size) != instr(upper(file_size),'M'))
+     AND (length(file_size) != instr(upper(file_size),'K'))
+     AND (NOT yesno)
+  then
+     raise invalid_file_size;
+  else
+     case upper(substr(file_size,length(file_size),1))
+       when 'G' then
+         file_blocks:=floor((substr(file_size,1,length(file_size)-1)*power(2,30))/file_block_size);
+       when 'M' then
+         file_blocks:=floor((substr(file_size,1,length(file_size)-1)*power(2,20))/file_block_size);
+       when 'K' then
+         file_blocks:=floor((substr(file_size,1,length(file_size)-1)*power(2,10))/file_block_size);
+       else
+         file_blocks:=floor(file_size/file_block_size);
+     end case;
+  end if;
+######################################################################################################
+
+select tablespace_name,
+file_id,
+file_name DATA_FILE_NAME,
+Allocated_MBYTES,
+High_Water_Mark_MBYTES,
+FREE_MBYTES,
+trunc((FREE_MBYTES/Allocated_MBYTES)*100,2) "% Free",
+trunc(Allocated_MBYTES-High_Water_Mark_MBYTES,2) Resizable
+from
+(
+select ddf.tablespace_name tablespace_name,
+ddf.file_id file_id,
+ddf.file_name file_name,
+ddf.bytes/1024/1024 Allocated_MBYTES,
+trunc((ex.hwm*(dt.block_size))/1024/1024,2) High_Water_Mark_MBYTES,
+FREE_MBYTES
+from
+dba_data_files ddf,
+dba_tablespaces dt,
+(
+select file_id, sum(bytes/1024/1024) FREE_MBYTES
+from dba_free_space
+group by file_id
+) free,
+(
+select file_id, max(block_id+blocks) hwm
+from dba_extents
+group by file_id
+) ex
+where ddf.file_id = ex.file_id
+and ddf.tablespace_name = dt.tablespace_name
+and ddf.file_id = free.file_id (+)
+order by ddf.tablespace_name, ddf.file_id
+);
+######################################################################################################
+

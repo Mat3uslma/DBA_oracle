@@ -1,0 +1,21 @@
+renomeia datafile para o asm
+
+
+SET NEWNAME DATAFILE 1 TO '+DATA/ORCL/DATAFILE/system01.dbf';
+SET NEWNAME DATAFILE 1 TO '+DATA/ORCL/DATAFILE/sysaux01.dbf';
+SET NEWNAME DATAFILE 1 TO '+DATA/ORCL/DATAFILE/undotbs01.dbf';
+SET NEWNAME DATAFILE 1 TO '+DATA/ORCL/DATAFILE/users01.dbf';
+SET NEWNAME DATAFILE 1 TO '+DATA/ORCL/DATAFILE/temp01.dbf';
+#########################################################
+
+Copiar datafile para asm
+
+COPY datafile '/u02/oradata/ORCL/system01.dbf' to '+DATA';
+COPY datafile '/u02/oradata/ORCL/sysaux01.dbf' to '+DATA';
+COPY datafile '/u02/oradata/ORCL/undotbs01.dbf' to '+DATA';
+COPY datafile '/u02/oradata/ORCL/users01.dbf' to '+DATA';
+COPY datafile '/u02/oradata/ORCL/temp01.dbf' to '+DATA';
+
+Movimentação via SqlPlus
+
+alter database move datafile 13 to '+DATA';

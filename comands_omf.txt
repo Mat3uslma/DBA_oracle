@@ -1,0 +1,105 @@
+Oracle Database: Como configurar o Oracle Managed-Files (OMF)
+
+- Ambiente
+S.O: Oracle Linux 7
+SGBD: Oracle 19c 
+Banco: Single Instance com Multitenant (CDB, PDB)
+Versões que se aplica: 10g e superiores
+
+
+--> O que é o OMF 
+
+O Oracle Managed-Files (OMF) é uma funcionalidade do Oracle Database que simplifica os comandos necessários para adicionar datafiles e redo logfiles no banco de dados.
+
+
+--> Considerações
+
+	- Não vem habilitado por padrao
+	- Quando o armazenamento e ASM ja vem habilitado 
+	- Suporta apenas um destino (datafiles)
+	- Não é obrigatorio, ou seja, podem ter arquivos em outros destinos 
+	
+	
+--> Configurando
+
+- Datafiles (PDB)
+
+ALTER SESSION SET CONTAINER=PDB01;
+
+- Verificando configuração atual 
+
+SQL> show parameters db_create_file_dest;
+
+
+- Alterando parametro
+
+SQL> alter system set db_create_file_dest='/u01/app/oracle/oradata/datafiles' scope=both;
+
+
+- Criando tablespaces 
+
+Com o OMF 
+SQL> CREATE TABLESPACE tbs_com_omf;
+
+Sem o OMF 
+SQL> CREATE TABLESPACE tbs_sem_omf DATAFILE '/u02/app/oracle/oradata/CDB19C/PDB01/tbs_sem_omf01.dbf' SIZE 5m;
+
+
+- Adicionando datafiles 
+
+Com OMF 
+SQL> ALTER TABLESPACE tbs_com_omf ADD DATAFILE;
+
+Sem OMF
+SQL> ALTER TABLESPACE tbs_sem_omf ADD DATAFILE '/u02/app/oracle/oradata/CDB19C/PDB01/tbs_sem_omf02.dbf' SIZE 5m;
+
+
+- Verificando destinos dos datafiles 
+
+SQL> SET PAGESIZE 500;
+     SET LINESIZE 300;
+     SELECT tablespace_name, file_name FROM dba_data_files ORDER BY 1,2;
+
+- Link referencia da nomenclatura dos nomes dos datafiles:
+
+
+- Redos log files (CDB)
+
+- Verificando configuração atual 
+
+SQL> show parameter db_create_online;
+
+
+- Alterando parametro
+
+SQL> alter system set db_create_online_log_dest_1='/u01/app/oracle/oradata/redos/dest01';
+SQL> alter system set db_create_online_log_dest_2='/u01/app/oracle/oradata/redos/dest02';
+
+
+- Criando um grupo de redos
+
+Com OMF 
+SQL> ALTER DATABASE ADD LOGFILE;
+SQL> ALTER DATABASE ADD LOGFILE SIZE 200m;
+
+Sem OMF 
+SQL> ALTER DATABASE ADD LOGFILE GROUP 6 ('/u02/app/oracle/oradata/CDB19C/redo06.log') SIZE 200M;
+
+
+- Adicionando membros a um grupo
+
+Com OMF (não funciona)
+SQL> ALTER DATABASE ADD LOGFILE MEMBER GROUP 4;
+
+Sem OMF 
+SQL> ALTER DATABASE ADD LOGFILE MEMBER '/u01/app/oracle/oradata/redos/dest02/CDB19C/onlinelog/redob04.log' TO GROUP 4;
+
+
+- Verificando destinos dos redos logfiles
+
+SQL> SET PAGESIZE 500;
+     SET LINESIZE 300;
+	 SELECT group#, member FROM v$logfile ORDER BY 1;
+	 
+- Link referencia da nomenclatura dos nomes dos redos logfiles:
+	 

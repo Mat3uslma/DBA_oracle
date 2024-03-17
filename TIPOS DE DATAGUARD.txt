@@ -1,0 +1,53 @@
+TIPOS DE DATAGUARD
+
+DataGuard Fisico(Physical Standby Database)
+Cópia exata de um database(bloco a bloco)
+Sicronizado através dos archived logs vindos do banco de dados Primario
+Pode ser usado para relatórios em paralelo com o ambiente de produção
+
+DataGurad Lógico
+Compartilha as mesmas definições de schema
+Sicrnonizado através dos comandos SQL que são executados no ambiente Primario
+Pode ser usado em paralelo (leitura/escrita) com  produção para relatórios e upgrades
+
+DataGuard Snapchot standby Database
+Banco de dados Standby completamente 'alteravel'
+Criado através da conversão de um DataGuard Fisico
+Atualizações locais são descartadas, quando o banco de dados volta a ser um standby fisico
+
+
+SERVIÇOS DATAGUARD
+Redo Transport Services
+Apply Services
+	Redo Apply
+	SQL Apply
+Role management services
+
+TROCA DE PAPEIS
+Switchhover (planejado)
+"O primeiro vira o segundo e o segundo vira o primeiro"
+Para manutenções Planejadas
+
+Failover(Não planejado)
+Usado em caso de desastres
+Zero ou minima perda de dados(depende da ação escolhida)
+Pode ser executado automaticamente ( com o fast-start-failover)
+
+FERRAMENTAS DE ADMINISTRAÇÃO
+Com dataguard Broker
+	DGMGRL (linha comando)
+	Entrepiser Manager Grid/Cloud control
+	Comandos SQL(diretos no banco de dados)
+Sem dataguard Broker
+Comandos SQL Direto no banco de dados
+
+
+METODOS DATAGUARD
+Disponibilidade
+Ambiente sempre funcional mesmo com a perda de informação
+Performance
+Ambiente rapido sem lentidão independente de tudo
+Custo
+
+
+Recomendados o Server sempre usar o mesmo hardware dos dois lados se temos ASM em um lado tem que ter do outro ou OMF ou entrepiser manager

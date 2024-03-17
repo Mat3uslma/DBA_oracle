@@ -1,0 +1,70 @@
+DECLARE
+tunningsql VARCHAR2(100);
+BEGIN
+tunningsql := DBMS_SQLTUNE.create_tuning_task (
+sql_id => '11sfp52v58kqw',
+scope => DBMS_SQLTUNE.scope_comprehensive,
+time_limit => 500,
+task_name => 'teste_id',
+description => 'Tuning task1 for statement 11sfp52v58kqw');
+DBMS_OUTPUT.put_line('tunningsql: ' || tunningsql);
+END;
+
+
+EXEC DBMS_SQLTUNE.execute_tuning_task(task_name => 'teste_id');
+
+SELECT TASK_NAME, STATUS FROM DBA_ADVISOR_LOG WHERE TASK_NAME='teste_id';
+
+set long 65536
+set longchunksize 65536
+set linesize 100
+select dbms_sqltune.report_tuning_task('teste_id') from hr;
+
+
+##################################################################
+
+COLETA ESTATISTICAS
+
+*Coletar estatisticas de um schema*
+EXEC DBMS_STATS.GATHER_SCHEMA_STATS('DBA01',CASCADE=>TRUE);
+
+*Coletar estatisticas de um banco*
+EXEC DBMS_STATS.GATHER_DATABASE_STATS;
+
+*Coletar estatisticas de uma tabela especifica*
+EXEC DBMS_STATS.GATHER_TABLE_STATS(OWNNAME=>'DBA01', TABNAME=>'HR', cascade=>true);
+
+*Remover colela de estatisticas*
+EXEC DBMS_STATS.DELETE_TABLE_STATS (OWNNAME=>'DBA01', TABNAME=>'HR');
+
+##################################################################
+*Verificar coleta de estatisticas ex: data e hora, tabelas que foram feita as coletas*
+
+set long 65536
+set longchunksize 65536
+set linesize 100
+SELECT
+   S.Owner As "Schema"
+  ,S.Table_Name As "Objeto"
+  ,S.Object_Type As "Tipo do Objeto"
+  ,S.Num_Rows As "Qtd. de Linhas"
+  ,To_Char(S.Last_Analyzed, 'yyyy-MM-dd HH24:mm:ss') As "Ultima Coleta"
+FROM
+  sys.dba_tab_statistics S
+WHERE
+  S.Owner Not In('DBA01','SYS', 'SYSTEM', 'SYSMAN', 'DBSNMP')
+ORDER BY
+  S.Last_Analyzed;
+
+##################################################################
+*Algumas informações sobre statistics*
+SELECT * FROM sys.dba_tab_statistics
+
+*Validar se o dicionario de dados foi atualizado ou não *
+SELECT T.table_name,
+       I.index_name,
+        T.blocks,
+           T.num_rows,
+         I.clustering_factor
+  FROM user_tables T,
+       user_indexes I

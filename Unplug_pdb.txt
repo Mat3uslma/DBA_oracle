@@ -1,0 +1,8 @@
+alter pluggable database orclpdb unplug into '/u02/oradata/orclpdb.xml';
+
+
+DROP PLUGGABLE DATABASE orclpda KEEP DATAFILES;
+
+DROP PLUGGABLE DATABASE orclpda INCLUDING DATAFILES;
+
+CREATE PLUGGABLE DATABASE orclpda USING '/u02/oradata/orclpdb.xml' NOCOPY TEMPFILE REUSE;
